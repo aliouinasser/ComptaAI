@@ -793,9 +793,11 @@ window.vInv=function(id){
   if(i.pdfB64){
     pdfSection='<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:600;margin-bottom:6px;color:var(--mt)">Document original</div>'
       +'<iframe src="'+i.pdfB64+'" style="width:100%;height:420px;border:1px solid var(--br);border-radius:6px" title="PDF"></iframe></div>';
+  }else if(i.driveId){
+    pdfSection='<div style="background:var(--sb);border-radius:7px;padding:9px 13px;margin-bottom:12px;font-size:12px;color:var(--mt)">📂 Document sur Drive (non mis en cache après rechargement).</div>';
   }
   md('<div class="modal mxl">'
-    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'
     +'<div class="mh" style="margin:0">Aperçu – '+id+'</div>'
     +'<div style="display:flex;gap:6px"><button class="btn bs" onclick="prInv(\''+id+'\')">🖨 PDF</button><button class="btn bs" onclick="cM()">✕</button></div>'
     +'</div>'
@@ -821,7 +823,8 @@ window.mNI=function(pc){
     +'<div class="fg"><label class="lbl">Date émission</label><input id="ni-dt" type="date" class="inp" value="'+tod()+'"></div>'
     +'<div class="fg"><label class="lbl">Échéance</label><input id="ni-du" type="date" class="inp" value="'+du.toISOString().split('T')[0]+'"></div>'
     +'<div class="fg"><label class="lbl">TVA défaut (%)</label><input id="ni-tv" type="number" class="inp" value="'+(S.co.tr||20)+'"></div>'
-    +'<div class="fg sp2" style="margin-top:8px"><label class="lbl">Taux de change (base MAD)</label><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px"><div><label style="font-size:10px;color:var(--mt)">1 EUR =</label><input id="s-fx-eur" type="number" class="inp" value="'+((S.co.fx&&S.co.fx.EUR)||10.8)+'" step="0.1"> MAD</div><div><label style="font-size:10px;color:var(--mt)">1 USD =</label><input id="s-fx-usd" type="number" class="inp" value="'+((S.co.fx&&S.co.fx.USD)||9.9)+'" step="0.1"> MAD</div><div><label style="font-size:10px;color:var(--mt)">1 GBP =</label><input id="s-fx-gbp" type="number" class="inp" value="'+((S.co.fx&&S.co.fx.GBP)||12.5)+'" step="0.1"> MAD</div></div></div>'+'<div class="fg"><label class="lbl">Devise</label><select id="ni-cu" class="inp">'+['MAD','EUR','USD','GBP'].map(function(c){return '<option value="'+c+'"'+((S.co.cu||'MAD')===c?' selected':'')+'>'+c+'</option>';}).join('')+'</select></div>'
+    +'<div class="fg sp2" style="margin-top:8px"><label class="lbl">Taux de change (base MAD)</label><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px"><div><label style="font-size:10px;color:var(--mt)">1 EUR =</label><input id="s-fx-eur" type="number" class="inp" value="'+((S.co.fx&&S.co.fx.EUR)||10.8)+'" step="0.1"> MAD</div><div><label style="font-size:10px;color:var(--mt)">1 USD =</label><input id="s-fx-usd" type="number" class="inp" value="'+((S.co.fx&&S.co.fx.USD)||9.9)+'" step="0.1"> MAD</div><div><label style="font-size:10px;color:var(--mt)">1 GBP =</label><input id="s-fx-gbp" type="number" class="inp" value="'+((S.co.fx&&S.co.fx.GBP)||12.5)+'" step="0.1"> MAD</div></div></div>'+'<div class="fg"><label class="lbl">Devise</label><select id="ni-cu" class="inp" onchange="updNITaux()">'+['MAD','EUR','USD','GBP'].map(function(c){return '<option value="'+c+'"'+((S.co.cu||'MAD')===c?' selected':'')+'>'+c+'</option>';}).join('')+'</select></div>'
+    +'<div class="fg" id="ni-taux-box" style="'+(S.co.cu==='MAD'?'display:none':'')+'"><label class="lbl">Taux de change (1 devise = X MAD)</label><input id="ni-taux" type="number" class="inp" value="'+( fxRate(S.co.cu)||1)+'" step="0.01" oninput="updNIT()"></div>'
     +'</div>'
     +'<div style="margin-top:12px"><label class="lbl">Lignes</label>'
     +'<div style="display:grid;grid-template-columns:1fr 50px 100px 60px 22px;gap:5px;margin-bottom:4px;font-size:10px;color:var(--dm);text-transform:uppercase"><span>Description</span><span>Qté</span><span>Prix HT</span><span>TVA%</span><span></span></div>'
@@ -835,13 +838,58 @@ window.mNI=function(pc){
 };
 window.chkNum=function(el){var dup=S.io.some(function(x){return x.id===el.value;});var w=document.getElementById('ni-nw');if(w)w.innerHTML=dup?'<span style="color:var(--bad)">⚠ Doublon</span>':'<span style="color:var(--ok)">✓</span>';};
 window.addNIR=function(){var r=document.createElement('div');r.className='ir';r.style.cssText='display:grid;grid-template-columns:1fr 50px 100px 60px 22px;gap:5px;margin-bottom:5px';var tv=document.getElementById('ni-tv')?.value||20;r.innerHTML='<input class="inp id" placeholder="Prestation"><input type="number" class="inp iq" value="1" style="text-align:center"><input type="number" class="inp ip" placeholder="0" style="text-align:right"><input type="number" class="inp itv" value="'+tv+'" style="text-align:center"><button onclick="this.closest(\'.ir\').remove();updNIT()" style="background:none;border:none;cursor:pointer;color:var(--bad);font-size:16px">×</button>';document.getElementById('nirows').appendChild(r);r.querySelectorAll('.iq,.ip,.itv').forEach(function(e){e.addEventListener('input',updNIT);});};
-window.updNIT=function(){var t=0;document.querySelectorAll('#nirows .ir').forEach(function(r){var q=parseFloat(r.querySelector('.iq')?.value)||0,p=parseFloat(r.querySelector('.ip')?.value)||0,tv=parseFloat(r.querySelector('.itv')?.value)||0;t+=q*p*(1+tv/100);});var el=document.getElementById('ni-tot');if(el)el.textContent=fmt(t,document.getElementById('ni-cu')?.value);};
+window.onViCuChange=function(){
+  var cu2=document.getElementById('vi-cu')?.value||'MAD';
+  var tb=document.getElementById('vi-taux-box');
+  var ti=document.getElementById('vi-taux');
+  if(tb)tb.style.display=(cu2==='MAD'?'none':'');
+  if(ti&&cu2!=='MAD')ti.value=fxRate(cu2).toFixed(4);
+  updVIAm();
+};
+window.updVIAm=function(){
+  var cu=document.getElementById('vi-cu')?.value||'MAD';
+  var taux=parseFloat(document.getElementById('vi-taux')?.value)||fxRate(cu)||1;
+  var amEl=document.getElementById('vi-am');
+  var amMADEl=document.getElementById('vi-am-mad');
+  if(!amEl)return;
+  var amForeign=parseFloat(amEl.value)||0;
+  var amMAD=cu==='MAD'?amForeign:amForeign*taux;
+  if(amMADEl)amMADEl.textContent=cu!=='MAD'?('≈ '+fmt(amMAD)+' MAD'):'';
+};
+window.updNITaux=function(){
+  var cu=document.getElementById('ni-cu')?.value||'MAD';
+  var tauxBox=document.getElementById('ni-taux-box');
+  var tauxInp=document.getElementById('ni-taux');
+  if(tauxBox)tauxBox.style.display=(cu==='MAD'?'none':'');
+  if(tauxInp&&cu!=='MAD')tauxInp.value=fxRate(cu).toFixed(4);
+  updNIT();
+};
+window.updNIT=function(){
+  var t=0;
+  document.querySelectorAll('#nirows .ir').forEach(function(r){
+    var q=parseFloat(r.querySelector('.iq')?.value)||0,p=parseFloat(r.querySelector('.ip')?.value)||0,tv=parseFloat(r.querySelector('.itv')?.value)||0;
+    t+=q*p*(1+tv/100);
+  });
+  var cu=document.getElementById('ni-cu')?.value||'MAD';
+  var taux=parseFloat(document.getElementById('ni-taux')?.value)||fxRate(cu)||1;
+  var tMad=cu==='MAD'?t:t*taux;
+  var el=document.getElementById('ni-tot');
+  if(el){
+    if(cu!=='MAD'){
+      el.textContent=new Intl.NumberFormat('fr-MA',{maximumFractionDigits:2}).format(t)+' '+cu+' = '+fmt(tMad);
+    }else{
+      el.textContent=fmt(t);
+    }
+  }
+};
 window.savNI=function(){
   var cl=document.getElementById('ni-cl').value;if(!cl){toast('Client requis','bad');return;}
   var it=[];document.querySelectorAll('#nirows .ir').forEach(function(r){var d=r.querySelector('.id')?.value||'',q=parseFloat(r.querySelector('.iq')?.value)||1,p=parseFloat(r.querySelector('.ip')?.value)||0,tv=parseFloat(r.querySelector('.itv')?.value)||0;if(d||p)it.push({d:d,q:q,p:p,tv:tv});});
   if(!it.length){toast('Ajoutez au moins une ligne','bad');return;}
   var tv=parseFloat(document.getElementById('ni-tv').value)||0,cu=document.getElementById('ni-cu').value||S.co.cu||'MAD';
-  var am=Math.round(it.reduce(function(s,x){return s+x.q*x.p*(1+x.tv/100);},0)*100)/100;
+  var taux=parseFloat(document.getElementById('ni-taux')?.value)||fxRate(cu)||1;
+  var amForeign=Math.round(it.reduce(function(s,x){return s+x.q*x.p*(1+x.tv/100);},0)*100)/100;
+  var am=cu==='MAD'?amForeign:Math.round(amForeign*taux*100)/100;
   var customId=document.getElementById('ni-num').value;
   S.io.push({id:customId,cl:cl,em:document.getElementById('ni-em').value,cice:document.getElementById('ni-cice').value,crc:document.getElementById('ni-crc').value,am:am,dt:document.getElementById('ni-dt').value,du:document.getElementById('ni-du').value,st:'brouillon',tv:tv,cu:cu,it:it});
   S.nI++;sv();cM();rfDash();if(window.renderIO)renderIO();else go('io');toast('Facture créée','ok');
@@ -967,12 +1015,13 @@ window.valII=function(id){
   h+='<div class="fgr">'
     +'<div class="fg"><label class="lbl">Fournisseur</label><input id="vi-sp" class="inp" value="'+( i.sp||'').replace(/"/g,'&quot;')+'" oninput=\"autoFillCat(this.value)\"></div>'
     +'<div class="fg"><label class="lbl">N° Facture</label><input id="vi-id" class="inp" value="'+(i.id||'')+'"></div>'
-    +'<div class="fg"><label class="lbl">Type</label><select id="vi-itype" class="inp"><option value="achat"'+(( i.itype||'achat')==='achat'?' selected':'')+'>Achat (dépense)</option><option value="vente"'+(i.itype==='vente'?' selected':'')+'>Vente (revenu)</option></select></div>'
+    +'<div class="fg"><label class="lbl">Type</label><select id="vi-itype" class="inp"><option value="achat"'+(( i.itype||'achat')==='achat'?' selected':'')+'>Achat (dépense)</option><option value="vente"'+(i.itype==='vente'?' selected':'')+'>Vente → Facture Émise</option><option value="avoir"'+(i.itype==='avoir'?' selected':'')+'>Avoir / Note de crédit</option></select></div>'
     +'<div class="fg"><label class="lbl">Date</label><input id="vi-dt" type="date" class="inp" value="'+(i.dt||'')+'"></div>'
     +'<div class="fg"><label class="lbl">Échéance</label><input id="vi-du" type="date" class="inp" value="'+(i.du||'')+'"></div>'
-    +'<div class="fg"><label class="lbl">Montant TTC</label><input id="vi-am" type="number" class="inp" value="'+(i.am||0)+'"></div>'
+    +'<div class="fg"><label class="lbl">Montant TTC</label><input id="vi-am" type="number" class="inp" value="'+(i.am||0)+'" oninput="updVIAm()"></div>'
     +'<div class="fg"><label class="lbl">TVA (%)</label><input id="vi-tv" type="number" class="inp" value="'+(i.tv||0)+'"></div>'
-    +'<div class="fg"><label class="lbl">Devise</label><select id="vi-cu" class="inp">'+['MAD','EUR','USD'].map(function(c){return '<option value="'+c+'"'+((i.cu||S.co.cu)===c?' selected':'')+'>'+c+'</option>';}).join('')+'</select></div>'
+    +'<div class="fg"><label class="lbl">Devise</label><select id="vi-cu" class="inp" onchange="onViCuChange()" >'+['MAD','EUR','USD','GBP'].map(function(c){return '<option value="'+c+'"'+((i.cu||S.co.cu)===c?' selected':'')+'>'+c+'</option>';}).join('')+'</select></div>'
+    +'<div class="fg" id="vi-taux-box" style="'+((i.cu||'MAD')==='MAD'?'display:none':'')+'"><label class="lbl">Taux de change (1 devise = X MAD)</label><div style="display:flex;gap:8px;align-items:center"><input id="vi-taux" type="number" class="inp" value="'+(fxRate(i.cu||'MAD')).toFixed(4)+'" step="0.0001" oninput="updVIAm()"><span style="font-size:12px;color:var(--mt)">MAD</span></div></div>'
     +'<div class="fg"><label class="lbl">Catégorie</label>'+catSel+'</div>'
     +'<div class="fg"><label class="lbl">Sous-catégorie</label>'+subSel+'</div>'
     +'<div class="fg"><label class="lbl">Mode paiement</label><select id="vi-pm" class="inp">'+PAY_METHODS.map(function(p){return '<option'+(i.pm===p?' selected':'')+'>'+p+'</option>';}).join('')+'</select></div>'
@@ -990,9 +1039,14 @@ window.svValII=function(id){
   i.itype=newType;
   i.dt=document.getElementById('vi-dt').value;
   i.du=document.getElementById('vi-du')?.value||'';
-  i.am=parseFloat(document.getElementById('vi-am').value)||0;
+  var _cu=document.getElementById('vi-cu').value||'MAD';
+  var _taux=parseFloat(document.getElementById('vi-taux')?.value)||fxRate(_cu)||1;
+  var _amForeign=parseFloat(document.getElementById('vi-am').value)||0;
+  i.am=_cu==='MAD'?_amForeign:Math.round(_amForeign*_taux*100)/100;
+  i.amForeign=_cu!=='MAD'?_amForeign:undefined;
+  i.taux=_cu!=='MAD'?_taux:undefined;
   i.tv=parseFloat(document.getElementById('vi-tv').value)||0;
-  i.cu=document.getElementById('vi-cu').value;
+  i.cu=_cu;
   i.cat=document.getElementById('vi-cat').value;
   i.scat=document.getElementById('vi-scat')?.value||'';
   i.pm=document.getElementById('vi-pm').value;
