@@ -238,7 +238,7 @@ select.inp option{background:var(--sf)}
 // ════════════════════════════════════════════════════════
 function pwHash(s){return btoa(unescape(encodeURIComponent(s)));}
 var PW_HASH=localStorage.getItem('cai_pwh')||pwHash('ComptaAI2026');
-function chkPw(){var v=document.getElementById('lkpw').value.trim();if(!v)return;if(pwHash(v)===PW_HASH){sessionStorage.setItem('cai_s','1');document.getElementById('lk').style.display='none';}else{var e=document.getElementById('lkerr');e.textContent='Mot de passe incorrect';document.getElementById('lkpw').value='';var b=document.getElementById('lkb');b.style.animation='shake .4s';setTimeout(function(){b.style.animation='';e.textContent='';},2000);}}
+function chkPw(){var v=document.getElementById('lkpw').value.trim();if(!v)return;if(pwHash(v)===PW_HASH){sessionStorage.setItem('cai_s','1');document.getElementById('lk').style.display='none';go('dash');}else{var e=document.getElementById('lkerr');e.textContent='Mot de passe incorrect';document.getElementById('lkpw').value='';var b=document.getElementById('lkb');b.style.animation='shake .4s';setTimeout(function(){b.style.animation='';e.textContent='';},2000);}}
 function chgPw(o,n){if(pwHash(o)!==PW_HASH){toast('Ancien mot de passe incorrect','bad');return false;}PW_HASH=pwHash(n);localStorage.setItem('cai_pwh',PW_HASH);sessionStorage.setItem('cai_s','1');toast('Mot de passe modifié !','ok');return true;}
 function chkAuth(){if(sessionStorage.getItem('cai_s')==='1')document.getElementById('lk').style.display='none';}
 function logout(){sessionStorage.removeItem('cai_s');location.reload();}
@@ -609,7 +609,7 @@ function renderTX(container,fl){
     else{
       h+='<div class="tbl-wrap"><table class="tbl" style="min-width:560px"><thead><tr><th>Date ↑</th><th>Description</th><th>Catégorie</th><th>TVA</th><th>Paiement</th><th style="text-align:right">Montant</th><th></th></tr></thead><tbody>';
       vis.forEach(function(t){
-        var inv=t.src!=='tx';
+        var inv=(t.src==='inv');
         h+='<tr style="'+(inv?'opacity:.8;font-style:italic':'')+'">';
         h+='<td style="color:var(--mt);white-space:nowrap;font-style:normal">'+fd(t.dt)+'</td>';
         h+='<td><span style="width:6px;height:6px;border-radius:50%;background:'+(t.tp==='in'?'var(--ok)':'var(--bad)')+';display:inline-block;margin-right:6px"></span>'+t.dc+'</td>';
@@ -617,7 +617,7 @@ function renderTX(container,fl){
         h+='<td style="color:var(--mt)">'+(t.tv||0)+'%</td>';
         h+='<td style="color:var(--mt);font-size:11px">'+(t.pm||'—')+'</td>';
         h+='<td style="text-align:right;color:'+(t.tp==='in'?'var(--ok)':'var(--bad)')+';font-weight:500" class="mono">'+(t.tp==='in'?'+':'−')+fmt(t.am)+'</td>';
-        h+='<td>'+(inv?'<span style="font-size:10px;color:var(--dm)">auto</span>':(t.src==='sal'?'<button onclick="eSal(\\\'\'+t.id.replace(\'sal_\',\'\')+\'\\\')" class="btn bx" title="Modifier">✏️</button>'+'<button onclick="delSal(\\\'\'+t.id.replace(\'sal_\',\'\')+\'\\\')" class="btn bx bbad" title="Supprimer">×</button>':'<button onclick="eTx(\\\'\'+t.id+\'\\\')" class="btn bx" title="Modifier">✏️</button>'+'<button onclick="delTx(\\\'\'+t.id+\'\\\')" class="btn bx bbad" title="Supprimer">×</button>'))+'</td>';
+        h+='<td>'+(inv?'<span style="font-size:10px;color:var(--dm)">auto</span>':(t.src==='sal'?'<button data-sid="'+t.id.replace('sal_','')+'" onclick="eSal(this.dataset.sid)" class="btn bx" title="Modifier">✏️</button>'+'<button data-sid="'+t.id.replace('sal_','')+'" onclick="delSal(this.dataset.sid)" class="btn bx bbad" title="Supprimer">×</button>':'<button data-tid="'+t.id+'" onclick="eTx(this.dataset.tid)" class="btn bx" title="Modifier">✏️</button>'+'<button data-tid="'+t.id+'" onclick="delTx(this.dataset.tid)" class="btn bx bbad" title="Supprimer">×</button>'))+'</td>';
         h+='</tr>';
       });
       h+='</tbody></table></div>';
