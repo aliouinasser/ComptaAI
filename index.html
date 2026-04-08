@@ -617,7 +617,7 @@ function renderTX(container,fl){
         h+='<td style="color:var(--mt)">'+(t.tv||0)+'%</td>';
         h+='<td style="color:var(--mt);font-size:11px">'+(t.pm||'—')+'</td>';
         h+='<td style="text-align:right;color:'+(t.tp==='in'?'var(--ok)':'var(--bad)')+';font-weight:500" class="mono">'+(t.tp==='in'?'+':'−')+fmt(t.am)+'</td>';
-        h+='<td>'+(inv?'<span style="font-size:10px;color:var(--dm)">auto</span>':(t.src==='sal'?'<button onclick="delSal(\''+t.id.replace('sal_','')+'\')" class="btn bx bbad">×</button>':'<button onclick="delTx(\''+t.id+'\')" class="btn bx bbad">×</button>'))+'</td>';
+        h+='<td>'+(inv?'<span style="font-size:10px;color:var(--dm)">auto</span>':(t.src==='sal'?'<button onclick="eSal(\\\'\'+t.id.replace(\'sal_\',\'\')+\'\\\')" class="btn bx" title="Modifier">✏️</button>'+'<button onclick="delSal(\\\'\'+t.id.replace(\'sal_\',\'\')+\'\\\')" class="btn bx bbad" title="Supprimer">×</button>':'<button onclick="eTx(\\\'\'+t.id+\'\\\')" class="btn bx" title="Modifier">✏️</button>'+'<button onclick="delTx(\\\'\'+t.id+\'\\\')" class="btn bx bbad" title="Supprimer">×</button>'))+'</td>';
         h+='</tr>';
       });
       h+='</tbody></table></div>';
@@ -655,7 +655,69 @@ window.savTx=function(){
   if(!d||!a){toast('Champs requis','bad');return;}
   S.tx.push({id:uid(),tp:document.getElementById('at-t').value,cat:document.getElementById('at-c').value,scat:document.getElementById('at-sc')?.value||'',dc:d,am:a,dt:document.getElementById('at-dt').value,tv:parseFloat(document.getElementById('at-v').value)||0,pm:document.getElementById('at-pm')?.value||''});
   sv();cM();if(window.renderTX)renderTX();else go('tx');rfDash();toast('Transaction ajoutée','ok');
+}
+window.eTx=function(id){
+  var t=S.tx.find(function(x){return String(x.id)===String(id);});
+  if(!t)return;
+  var cats=Object.keys(CATS);
+  var catOpts=cats.map(function(k){return '<option value="'+k+'"'+(k===t.cat?' selected':'')+'>'+k+'</option>';}).join('');
+  var subOpts=getSubCats(t.cat).map(function(s){return '<option value="'+s+'"'+(s===t.scat?' selected':'')+'>'+s+'</option>';}).join('');
+  var pmOpts=['Virement bancaire','Chèque','Espèces','Carte bancaire','Prélèvement','Autre'].map(function(p){return '<option value="'+p+'"'+(p===t.pm?' selected':'')+'>'+p+'</option>';}).join('');
+  md('<div class="modal">'
+    +'<div class="mh">✏️ Modifier la transaction</div>'
+    +'<div class="fgr">'
+    +'<div class="fg"><label class="lbl">Type</label><select id="et-t" class="inp" onchange="updETxCats()"><option value="in"'+(t.tp==='in'?' selected':'')+'>Revenu</option><option value="ex"'+(t.tp==='ex'?' selected':'')+'>Dépense</option></select></div>'
+    +'<div class="fg"><label class="lbl">Date</label><input id="et-dt" type="date" class="inp" value="'+t.dt+'"></div>'
+    +'</div>'
+    +'<div class="fg"><label class="lbl">Description</label><input id="et-d" class="inp" value="'+( t.dc||'').replace(/"/g,'&quot;')+'"></div>'
+    +'<div class="fgr">'
+    +'<div class="fg"><label class="lbl">Catégorie</label><select id="et-c" class="inp" onchange="updETxCats()">'+catOpts+'</select></div>'
+    +'<div class="fg"><label class="lbl">Sous-catégorie</label><select id="et-sc" class="inp">'+subOpts+'</select></div>'
+    +'</div>'
+    +'<div class="fgr">'
+    +'<div class="fg"><label class="lbl">Montant (MAD)</label><input id="et-a" type="number" class="inp" value="'+t.am+'" step="0.01" style="text-align:right"></div>'
+    +'<div class="fg"><label class="lbl">TVA (%)</label><input id="et-v" type="number" class="inp" value="'+(t.tv||0)+'" step="0.01"></div>'
+    +'</div>'
+    +'<div class="fg"><label class="lbl">Mode de paiement</label><select id="et-pm" class="inp">'+pmOpts+'</select></div>'
+    +'<input type="hidden" id="et-id" value="'+id+'">'
+    +'<div class="fgr" style="margin-top:14px">'
+    +'<button onclick="cM()" class="btn bs" style="flex:1">Annuler</button>'
+    +'<button onclick="svETx()" class="btn bp" style="flex:2">✓ Enregistrer</button>'
+    +'</div>'
+    +'</div>');
 };
+
+window.updETxCats=function(){
+  var tp=document.getElementById('et-t')?.value;
+  var cat=document.getElementById('et-c')?.value;
+  var sc=document.getElementById('et-sc');
+  if(sc){
+    var subs=getSubCats(cat);
+    sc.innerHTML=subs.map(function(s){return '<option>'+s+'</option>';}).join('');
+  }
+};
+
+window.svETx=function(){
+  var id=document.getElementById('et-id')?.value;
+  var d=document.getElementById('et-d')?.value;
+  var a=parseFloat(document.getElementById('et-a')?.value)||0;
+  if(!d||!a){toast('Description et montant requis','bad');return;}
+  var t=S.tx.find(function(x){return String(x.id)===String(id);});
+  if(!t){toast('Transaction introuvable','bad');return;}
+  if(!S.audit)S.audit=[];
+  S.audit.unshift({ts:new Date().toISOString(),action:'edit_tx',id:String(id),dc:t.dc,am:t.am});
+  t.tp=document.getElementById('et-t').value;
+  t.dc=d;
+  t.am=a;
+  t.dt=document.getElementById('et-dt').value;
+  t.cat=document.getElementById('et-c').value;
+  t.scat=document.getElementById('et-sc')?.value||'';
+  t.tv=parseFloat(document.getElementById('et-v')?.value)||0;
+  t.pm=document.getElementById('et-pm')?.value||'';
+  sv();cM();if(window.renderTX)renderTX();rfDash();
+  toast('Transaction mise à jour ✓','ok');
+};
+;
 
 // Salary
 window.mSal=function(){
@@ -674,7 +736,41 @@ window.savSal=function(){
   if(!a){toast('Montant requis','bad');return;}
   S.sal.push({id:Date.now(),am:a,dt:document.getElementById('sal-dt').value,pm:document.getElementById('sal-pm').value,note:document.getElementById('sal-n').value});
   sv();cM();toast('Salaire enregistré','ok');rfDash();
+}
+window.eSal=function(id){
+  var s=S.sal.find(function(x){return String(x.id)===String(id);});
+  if(!s)return;
+  var pmOpts=['Virement bancaire','Chèque','Espèces','Carte bancaire','Prélèvement','Autre'].map(function(p){return '<option value="'+p+'"'+(p===(s.pm||'Virement bancaire')?' selected':'')+'>'+p+'</option>';}).join('');
+  md('<div class="modal">'
+    +'<div class="mh">✏️ Modifier le salaire</div>'
+    +'<div class="fg"><label class="lbl">Montant net versé (MAD)</label><input id="es-a" type="number" class="inp" value="'+s.am+'" step="0.01" style="text-align:right"></div>'
+    +'<div class="fg"><label class="lbl">Date de versement</label><input id="es-dt" type="date" class="inp" value="'+s.dt+'"></div>'
+    +'<div class="fg"><label class="lbl">Mode de paiement</label><select id="es-pm" class="inp">'+pmOpts+'</select></div>'
+    +'<div class="fg"><label class="lbl">Note</label><input id="es-n" class="inp" value="'+(s.note||'').replace(/"/g,'&quot;')+'" placeholder="Ex: Salaire avril 2026"></div>'
+    +'<input type="hidden" id="es-id" value="'+id+'">'
+    +'<div class="fgr" style="margin-top:14px">'
+    +'<button onclick="cM()" class="btn bs" style="flex:1">Annuler</button>'
+    +'<button onclick="svESal()" class="btn bp" style="flex:2">✓ Enregistrer</button>'
+    +'</div>'
+    +'</div>');
 };
+
+window.svESal=function(){
+  var id=document.getElementById('es-id')?.value;
+  var a=parseFloat(document.getElementById('es-a')?.value)||0;
+  if(!a){toast('Montant requis','bad');return;}
+  var s=S.sal.find(function(x){return String(x.id)===String(id);});
+  if(!s){toast('Salaire introuvable','bad');return;}
+  if(!S.audit)S.audit=[];
+  S.audit.unshift({ts:new Date().toISOString(),action:'edit_sal',id:String(id),am:s.am,note:s.note||''});
+  s.am=a;
+  s.dt=document.getElementById('es-dt').value;
+  s.pm=document.getElementById('es-pm').value;
+  s.note=document.getElementById('es-n').value;
+  sv();cM();if(window.renderTX)renderTX();rfDash();
+  if(window.renderTX)renderTX();rfDash();toast('Salaire mis à jour ✓','ok');
+};
+;
 
 // ════════════════════════════════════════════════════════
 // INVOICE TEMPLATE (ATH Consulting)
