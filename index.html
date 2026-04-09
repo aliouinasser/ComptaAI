@@ -1104,49 +1104,74 @@ window.xleII=function(){xle(S.ii.map(function(i){return{'N°':i.id,Fournisseur:i
 // Validation modal with PDF preview
 window.valII=function(id){
   var i=S.ii.find(function(x){return x.id===id;});if(!i)return;
-  var catSel=catSelect('vi-cat',i.cat||'Autre','(function(){var c=document.getElementById(\'vi-cat\').value;var el=document.getElementById(\'vi-scat\');if(el)el.innerHTML=getSubCats(c).map(function(s){return\'<option\'+( s===(\''+( i.scat||'')+'\')?\' selected\':\'\')+\'>\'+s+\'</option>\';}).join(\'\');})()');
+  var catSel=catSelect('vi-cat',i.cat||'Autre','(function(){var c=document.getElementById(\'vi-cat\').value;var el=document.getElementById(\'vi-scat\');if(el)el.innerHTML=getSubCats(c).map(function(s){return\'<option\'+(s===(\''+( i.scat||'')+'\')?\' selected\':\'\')+\'>\'+s+\'</option>\';}).join(\'\');})()');
   var subSel=subCatSelect('vi-scat',i.cat||'Autre',i.scat||'');
-  var h='<div class="modal mxl"><div class="mh">'+(i.ok?'✏ Modifier':'✓ Valider')+' – '+id+'</div>';
-  // Two columns: preview left (if PDF), form right
-  var hasB64=i.pdfB64;
-  // Show Drive reload button if PDF not in cache
-  var pdfDriveBanner='';
-  if(!hasB64&&i.driveId){
+  var pmOpts=['Virement bancaire','Chèque','Espèces','Carte bancaire','Prélèvement','Autre'].map(function(p){return'<option value="'+p+'"'+(p===(i.pm||'Virement bancaire')?' selected':'')+'>'+p+'</option>';}).join('');
+  var stOpts=['en attente','validée','payée','annulée'].map(function(s){return'<option value="'+s+'"'+(s===(i.st||'en attente')?' selected':'')+'>'+s+'</option>';}).join('');
+  var itypeOpts='<option value="achat"'+((i.itype||'achat')==='achat'?' selected':'')+'>Achat (dépense)</option>'
+    +'<option value="vente"'+(i.itype==='vente'?' selected':'')+'>Vente → Facture Émise</option>'
+    +'<option value="avoir"'+(i.itype==='avoir'?' selected':'')+'>Avoir / Note de crédit</option>';
+  var cuOpts=['MAD','EUR','USD','GBP'].map(function(cu){return'<option value="'+cu+'"'+((i.cu||'MAD')===cu?' selected':'')+'>'+cu+'</option>';}).join('');
+  var tauxVal=(fxRate(i.cu||'MAD')||1).toFixed(4);
+  var tauxBox=(i.cu&&i.cu!=='MAD')?'':'display:none';
+  var amMad=(i.cu&&i.cu!=='MAD')?('≈ '+fmt(Math.round(i.am*(fxRate(i.cu)||1)))):'';
+
+  // PDF section
+  var pdfSection='';
+  if(i.pdfB64){
+    pdfSection='<div style="margin-bottom:12px">'
+      +'<div style="font-size:11px;font-weight:600;color:var(--mt);margin-bottom:6px;text-transform:uppercase">Aperçu PDF</div>'
+      +'<iframe src="'+i.pdfB64+'" style="width:100%;height:320px;border:1px solid var(--br);border-radius:6px"></iframe>'
+      +'</div>';
+  }else if(i.driveId){
     if(S.dv.tk){
-      pdfDriveBanner='<div style="background:var(--sb);border-radius:7px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">'
-        +'<span style="font-size:12px;color:var(--mt)">📂 PDF sur Drive (non mis en cache)</span>'
-        +'<button class="btn bp" style="padding:5px 12px;font-size:12px" onclick="reloadPdf(\''+i.id+'\',\'ii\')">⬇ Charger le PDF</button>'
+      pdfSection='<div style="background:var(--sb);border-radius:7px;padding:9px 13px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">'
+        +'<span style="font-size:12px;color:var(--mt)">📂 PDF sur Drive</span>'
+        +'<button class="btn bp" style="padding:4px 10px;font-size:11px" onclick="reloadPdf(\''+i.id+'\',\'ii\')">⬇ Charger</button>'
         +'</div>';
     }else{
-      pdfDriveBanner='<div style="background:var(--sb);border-radius:7px;padding:9px 13px;margin-bottom:10px;font-size:12px;color:var(--mt)">📂 PDF sur Drive – reconnectez Drive pour le visualiser.</div>';
+      pdfSection='<div style="background:var(--sb);border-radius:7px;padding:8px 12px;margin-bottom:12px;font-size:11px;color:var(--mt)">📂 PDF sur Drive – reconnectez Drive pour visualiser.</div>';
     }
   }
-  if(hasB64){
-    h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">';
-    h+='<div><div style="font-size:11px;font-weight:600;color:var(--mt);text-transform:uppercase;margin-bottom:6px">Aperçu PDF</div>';
-    h+='<iframe src="'+i.pdfB64+'" style="width:100%;height:420px;border:1px solid var(--br);border-radius:8px"></iframe></div>';
-    h+='<div>';
-  }
-  h+=pdfDriveBanner;
-  h+='<div class="fgr">'
-  +'<div class="fg"><label class="lbl">Fournisseur</label><input id="vi-sp" class="inp" value="'+( i.sp||'').replace(/"/g,'&quot;')+'" oninput=\"autoFillCat(this.value)\"></div>'
+
+  var h='<div class="modal mxl">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'
+    +'<div class="mh" style="margin:0">'+(i.ok?'✏ Modifier':'✓ Valider')+' – '+id+'</div>'
+    +'<button class="btn bs" onclick="cM()">✕</button></div>'
+    +pdfSection
+    +'<div class="fgr">'
+    +'<div class="fg"><label class="lbl">Fournisseur</label><input id="vi-sp" class="inp" value="'+(i.sp||'').replace(/"/g,'&quot;')+'" oninput="autoFillCat(this.value)"></div>'
     +'<div class="fg"><label class="lbl">N° Facture</label><input id="vi-id" class="inp" value="'+(i.id||'')+'"></div>'
-    +'<div class="fg"><label class="lbl">Type</label><select id="vi-itype" class="inp"><option value="achat"'+(( i.itype||'achat')==='achat'?' selected':'')+'>Achat (dépense)</option><option value="vente"'+(i.itype==='vente'?' selected':'')+'>Vente → Facture Émise</option><option value="avoir"'+(i.itype==='avoir'?' selected':'')+'>Avoir / Note de crédit</option></select></div>'
+    +'</div>'
+    +'<div class="fgr">'
+    +'<div class="fg"><label class="lbl">Type</label><select id="vi-itype" class="inp">'+itypeOpts+'</select></div>'
     +'<div class="fg"><label class="lbl">Date</label><input id="vi-dt" type="date" class="inp" value="'+(i.dt||'')+'"></div>'
     +'<div class="fg"><label class="lbl">Échéance</label><input id="vi-du" type="date" class="inp" value="'+(i.du||'')+'"></div>'
-    +'<div class="fg"><label class="lbl">Montant TTC</label><input id="vi-am" type="number" class="inp" value="'+(i.am||0)+'" oninput="updVIAm()"></div>'
-    +'<div class="fg"><label class="lbl">TVA (%)</label><input id="vi-tv" type="number" class="inp" value="'+(i.tv||0)+'"></div>'
-    +'<div class="fg"><label class="lbl">Devise</label><select id="vi-cu" class="inp" onchange="onViCuChange()" >'+['MAD','EUR','USD','GBP'].map(function(c){return '<option value="'+c+'"'+((i.cu||S.co.cu)===c?' selected':'')+'>'+c+'</option>';}).join('')+'</select></div>'
-    +'<div class="fg" id="vi-taux-box" style="'+((i.cu||'MAD')==='MAD'?'display:none':'')+'"><label class="lbl">Taux de change (1 devise = X MAD)</label><div style="display:flex;gap:8px;align-items:center"><input id="vi-taux" type="number" class="inp" value="'+(fxRate(i.cu||'MAD')).toFixed(4)+'" step="0.0001" oninput="updVIAm()"><span style="font-size:12px;color:var(--mt)">MAD</span></div></div>'
+    +'</div>'
+    +'<div class="fgr">'
+    +'<div class="fg"><label class="lbl">Montant TTC <span id="vi-am-mad" style="font-size:10px;color:var(--inf);font-weight:400">'+amMad+'</span></label>'
+    +'<input id="vi-am" type="number" class="inp" value="'+(i.am||0)+'" step="0.01" style="text-align:right" oninput="updVIAm()"></div>'
+    +'<div class="fg"><label class="lbl">TVA (%)</label><input id="vi-tv" type="number" class="inp" value="'+(i.tv||0)+'" step="0.01"></div>'
+    +'</div>'
+    +'<div class="fgr">'
+    +'<div class="fg"><label class="lbl">Devise</label><select id="vi-cu" class="inp" onchange="onViCuChange()">'+cuOpts+'</select></div>'
+    +'<div class="fg" id="vi-taux-box" style="'+tauxBox+'"><label class="lbl">Taux (1 devise → MAD)</label><input id="vi-taux" type="number" class="inp" step="0.0001" value="'+tauxVal+'"></div>'
+    +'</div>'
+    +'<div class="fgr">'
     +'<div class="fg"><label class="lbl">Catégorie</label>'+catSel+'</div>'
     +'<div class="fg"><label class="lbl">Sous-catégorie</label>'+subSel+'</div>'
-    +'<div class="fg"><label class="lbl">Mode paiement</label><select id="vi-pm" class="inp">'+PAY_METHODS.map(function(p){return '<option'+(i.pm===p?' selected':'')+'>'+p+'</option>';}).join('')+'</select></div>'
-    +'<div class="fg"><label class="lbl">Statut</label><select id="vi-st" class="inp">'+['en attente','payée','en retard'].map(function(s){return '<option value="'+s+'"'+(i.st===s?' selected':'')+'>'+s+'</option>';}).join('')+'</select></div>'
+    +'</div>'
+    +'<div class="fgr">'
+    +'<div class="fg"><label class="lbl">Mode paiement</label><select id="vi-pm" class="inp">'+pmOpts+'</select></div>'
+    +'<div class="fg"><label class="lbl">Statut</label><select id="vi-st" class="inp">'+stOpts+'</select></div>'
+    +'</div>'
+    +'<div style="display:flex;gap:8px;margin-top:16px">'
+    +'<button class="btn" onclick="cM()" style="flex:1">Annuler</button>'
+    +'<button class="btn bp" onclick="svValII(\''+id+'\')" style="flex:2">✓ Valider et enregistrer</button>'
+    +'</div>'
     +'</div>';
-  if(hasB64)h+='</div></div>';
-  h+='<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button class="btn" onclick="cM()">Annuler</button><button class="btn bp" onclick="svValII(\''+id+'\')">✓ Valider et enregistrer</button></div></div>';
   md(h);
-};
+};;
 window.svValII=function(id){
   var i=S.ii.find(function(x){return x.id===id;});if(!i)return;
   var newType=document.getElementById('vi-itype').value;
@@ -1183,7 +1208,7 @@ window.svValII=function(id){
   // If type changed to vente → transfer to S.io (factures émises)
   if(newType==='vente'){
     S.ii=S.ii.filter(function(x){return x.id!==id;});
-    S.io.push({id:i.id,cl:i.sp,em:'',am:i.am,dt:i.dt,du:i.du||'',st:'envoyée',tv:i.tv,cu:i.cu,it:i.it||[],pdfB64:i.pdfB64||null});
+    S.io.push({id:i.id,cl:i.sp,em:'',am:i.am,dt:i.dt,du:i.du||'',driveId:i.driveId||null,pdfB64:i.pdfB64||null,st:'envoyée',tv:i.tv,cu:i.cu,it:i.it||[],pdfB64:i.pdfB64||null});
     sv();cM();rfDash();
     if(window.renderIO)renderIO();
     if(window.renderII)renderII();
