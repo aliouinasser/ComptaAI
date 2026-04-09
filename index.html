@@ -617,7 +617,7 @@ function renderTX(container,fl){
         h+='<td style="color:var(--mt)">'+(t.tv||0)+'%</td>';
         h+='<td style="color:var(--mt);font-size:11px">'+(t.pm||'—')+'</td>';
         h+='<td style="text-align:right;color:'+(t.tp==='in'?'var(--ok)':'var(--bad)')+';font-weight:500" class="mono">'+(t.tp==='in'?'+':'−')+fmt(t.am)+'</td>';
-        h+='<td>'+(inv?'<span style="font-size:10px;color:var(--dm)">auto</span>':(t.src==='sal'?'<button data-sid="'+t.id.replace('sal_','')+'" onclick="eSal(this.dataset.sid)" class="btn bx" title="Modifier">✏️</button>'+'<button data-sid="'+t.id.replace('sal_','')+'" onclick="delSal(this.dataset.sid)" class="btn bx bbad" title="Supprimer">×</button>':'<button data-tid="'+t.id+'" onclick="eTx(this.dataset.tid)" class="btn bx" title="Modifier">✏️</button>'+'<button data-tid="'+t.id+'" onclick="delTx(this.dataset.tid)" class="btn bx bbad" title="Supprimer">×</button>'))+'</td>';
+        h+='<td>'+(inv?'<span style="font-size:10px;color:var(--dm)">auto</span>':(t.src==='sal'?'<button data-sid="'+t.id.replace('sal_','')+'" onclick="eSal(this.dataset.sid)" class="btn bx" title="Modifier">✏️</button>'+'<button data-sid="'+t.id.replace('sal_','')+'" onclick="delSal(this.dataset.sid)" class="btn bx bbad" title="Supprimer">×</button>':'<button data-tid="'+t.id+'" onclick="delTx(this.dataset.tid)" class="btn bx bbad" title="Supprimer">×</button>'))+'</td>';
         h+='</tr>';
       });
       h+='</tbody></table></div>';
@@ -890,7 +890,14 @@ window.vInv=function(id){
     pdfSection='<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:600;margin-bottom:6px;color:var(--mt)">Document original</div>'
       +'<iframe src="'+i.pdfB64+'" style="width:100%;height:420px;border:1px solid var(--br);border-radius:6px" title="PDF"></iframe></div>';
   }else if(i.driveId){
-    pdfSection='<div style="background:var(--sb);border-radius:7px;padding:9px 13px;margin-bottom:12px;font-size:12px;color:var(--mt)">📂 Document sur Drive (non mis en cache après rechargement).</div>';
+    if(S.dv.tk){
+      pdfSection='<div style="background:var(--sb);border-radius:7px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">'
+        +'<span style="font-size:12px;color:var(--mt)">📂 PDF sur Drive (non mis en cache)</span>'
+        +'<button class="btn bp" style="padding:5px 12px;font-size:12px" onclick="reloadPdf(\''+i.id+'\',\'io\')">⬇ Charger le PDF</button>'
+        +'</div>';
+    }else{
+      pdfSection='<div style="background:var(--sb);border-radius:7px;padding:9px 13px;margin-bottom:12px;font-size:12px;color:var(--mt)">📂 PDF sur Drive – reconnectez Drive pour le visualiser.</div>';
+    }
   }
   md('<div class="modal mxl">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'
@@ -1102,6 +1109,18 @@ window.valII=function(id){
   var h='<div class="modal mxl"><div class="mh">'+(i.ok?'✏ Modifier':'✓ Valider')+' – '+id+'</div>';
   // Two columns: preview left (if PDF), form right
   var hasB64=i.pdfB64;
+  // Show Drive reload button if PDF not in cache
+  var pdfDriveBanner='';
+  if(!hasB64&&i.driveId){
+    if(S.dv.tk){
+      pdfDriveBanner='<div style="background:var(--sb);border-radius:7px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">'
+        +'<span style="font-size:12px;color:var(--mt)">📂 PDF sur Drive (non mis en cache)</span>'
+        +'<button class="btn bp" style="padding:5px 12px;font-size:12px" onclick="reloadPdf(\''+i.id+'\',\'ii\')">⬇ Charger le PDF</button>'
+        +'</div>';
+    }else{
+      pdfDriveBanner='<div style="background:var(--sb);border-radius:7px;padding:9px 13px;margin-bottom:10px;font-size:12px;color:var(--mt)">📂 PDF sur Drive – reconnectez Drive pour le visualiser.</div>';
+    }
+  }
   if(hasB64){
     h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">';
     h+='<div><div style="font-size:11px;font-weight:600;color:var(--mt);text-transform:uppercase;margin-bottom:6px">Aperçu PDF</div>';
@@ -1109,7 +1128,8 @@ window.valII=function(id){
     h+='<div>';
   }
   h+='<div class="fgr">'
-    +'<div class="fg"><label class="lbl">Fournisseur</label><input id="vi-sp" class="inp" value="'+( i.sp||'').replace(/"/g,'&quot;')+'" oninput=\"autoFillCat(this.value)\"></div>'
+      h+=pdfDriveBanner;
+  +'<div class="fg"><label class="lbl">Fournisseur</label><input id="vi-sp" class="inp" value="'+( i.sp||'').replace(/"/g,'&quot;')+'" oninput=\"autoFillCat(this.value)\"></div>'
     +'<div class="fg"><label class="lbl">N° Facture</label><input id="vi-id" class="inp" value="'+(i.id||'')+'"></div>'
     +'<div class="fg"><label class="lbl">Type</label><select id="vi-itype" class="inp"><option value="achat"'+(( i.itype||'achat')==='achat'?' selected':'')+'>Achat (dépense)</option><option value="vente"'+(i.itype==='vente'?' selected':'')+'>Vente → Facture Émise</option><option value="avoir"'+(i.itype==='avoir'?' selected':'')+'>Avoir / Note de crédit</option></select></div>'
     +'<div class="fg"><label class="lbl">Date</label><input id="vi-dt" type="date" class="inp" value="'+(i.dt||'')+'"></div>'
@@ -1547,6 +1567,22 @@ async function runBankAI(content){
 // ════════════════════════════════════════════════════════
 // GOOGLE DRIVE
 // ════════════════════════════════════════════════════════
+window.reloadPdf=async function(id,type){
+  if(!S.dv.tk){toast('Connectez Google Drive d\'abord','bad');return;}
+  var inv=type==='io'?S.io.find(function(x){return x.id===id;}):S.ii.find(function(x){return x.id===id;});
+  if(!inv||!inv.driveId){toast('Document Drive introuvable','bad');return;}
+  toast('Chargement du PDF…','i');
+  try{
+    var resp=await fetch('https://www.googleapis.com/drive/v3/files/'+inv.driveId+'?alt=media',{headers:{'Authorization':'Bearer '+S.dv.tk}});
+    if(!resp.ok){toast('Erreur Drive: '+resp.status,'bad');return;}
+    var blob=await resp.blob();
+    inv.pdfB64=await new Promise(function(res){var rd=new FileReader();rd.onload=function(){res(rd.result);};rd.readAsDataURL(blob);});
+    cM();
+    // Reopen the preview modal with the PDF
+    if(type==='io')vInv(id);else valII(id);
+    toast('PDF chargé ✓','ok');
+  }catch(e){toast('Erreur: '+e.message,'bad');}
+};
 function pgDR(ct,acts){
   if(!S.dv.on){
     ct.innerHTML='<div class="al ai" style="margin-bottom:16px"><strong>Google Drive</strong> – Synchronisation automatique + base de données en ligne.</div>'
